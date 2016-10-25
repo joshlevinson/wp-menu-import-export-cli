@@ -4,21 +4,21 @@ if ( ! defined( 'WP_CLI' ) ) {
 	return;
 }
 
-class Menu_Command extends WP_CLI_Command {
+class Menu_Porter extends WP_CLI_Command {
 
-    /**
-     * Handle menu import cli command and call import_json() to import menu content from a json file.
+	/**
+	 * Handle menu import cli command and call import_json() to import menu content from a json file.
 	 *
 	 * Still soo much to do:
 	 * - (maybe) support pasting a json object on the commandline instead of file name
 	 * - (maybe) incorporate into main cli import and export commands
 	 * - add wp-admin ui to call functions without setting up wp-cli
 	 * - support mode and missing parameters
-     *
-     * ## OPTIONS
-     *
-     * <file>
-     * : Path to a valid json file for importing.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <file>
+	 * : Path to a valid json file for importing.
 	 *
 	 * json object should be in the form:
 	 * [
@@ -45,26 +45,26 @@ class Menu_Command extends WP_CLI_Command {
 	 * <mode>
 	 * : update = matching menus and menu items overwritten. skip = matching items skipped, missing items skipped. append = matching skipped, new items added
 	 *
-     * <missing>
-     * : Method for handling missing objects pointed to by menu. Can be 'create', 'skip', 'default'.
+	 * <missing>
+	 * : Method for handling missing objects pointed to by menu. Can be 'create', 'skip', 'default'.
 	 *
 	 * <default>
 	 * : page to point to if matching slug isn't found. If default slug doesn't exist either menu items will be skipped.
-     *
-     * @synopsis <file> [--mode=<mode>] [--missing=<missing>] [--default=<default>]
-     */
+	 *
+	 * @synopsis <file> [--mode=<mode>] [--missing=<missing>] [--default=<default>]
+	 */
 
-    public function import ( $args, $assoc_args ) {
-        list( $file ) = $args;
+	public function import ( $args, $assoc_args ) {
+		list( $file ) = $args;
 
-        if ( ! file_exists( $file ) )
-            WP_CLI::error( "File to import doesn't exist." );
+		if ( ! file_exists( $file ) )
+			WP_CLI::error( "File to import doesn't exist." );
 
-        $defaults = array(
-            'missing' => 'skip',
-            'default' => null,
-        );
-        $assoc_args = wp_parse_args( $assoc_args, $defaults );
+		$defaults = array(
+			'missing' => 'skip',
+			'default' => null,
+		);
+		$assoc_args = wp_parse_args( $assoc_args, $defaults );
 
 		$ret = $this->import_json( $file, $assoc_args['missing'], $assoc_args['default'] );
 
@@ -163,13 +163,13 @@ class Menu_Command extends WP_CLI_Command {
 		endforeach;
 	}
 
-    /**
-     * Handle menu export cli command and call export_json() to export menu content to a json file.
+	/**
+	 * Handle menu export cli command and call export_json() to export menu content to a json file.
 	 *
-     * ## OPTIONS
-     *
-     * <file>
-     * : Path to export to.
+	 * ## OPTIONS
+	 *
+	 * <file>
+	 * : Path to export to.
 	 *
 	 * json object will be in the form:
 	 * [
@@ -196,19 +196,19 @@ class Menu_Command extends WP_CLI_Command {
 	 *
 	 * <mode>
 	 * : absolute or relative
-     *
-     * @synopsis <file> [--mode=<mode>]
-     */
+	 *
+	 * @synopsis <file> [--menu=<menu>]
+	 */
 
-    public function export ( $args, $assoc_args ) {
-        list( $file ) = $args;
+	public function export ( $args, $assoc_args ) {
+		list( $file ) = $args;
 
-        $defaults = array(
-            'mode' => 'absolute',
-        );
-        $assoc_args = wp_parse_args( $assoc_args, $defaults );
+		$defaults = array(
+			'menu' => '',
+		);
+		$assoc_args = wp_parse_args( $assoc_args, $defaults );
 
-		$ret = $this->export_json( $file, $assoc_args['mode'] );
+		$ret = $this->export_json( $file, $assoc_args['menu'] );
 
 		if ( is_wp_error( $ret ) ) {
 			WP_CLI::error( $ret->get_error_message() );
@@ -224,11 +224,24 @@ class Menu_Command extends WP_CLI_Command {
 	 * @param string $file Name of file to export to.
 	 * @param string $mode - not yet implemented
 	 */
-	public function export_json( $file, $mode = 'relative' ) {
+	public function export_json( $file, $specific_menu = '' ) {
 
 		$locations = get_nav_menu_locations();
 		$menus     = wp_get_nav_menus();
 		$exporter  = array();
+
+		if ( $specific_menu ) {
+
+			if ( ! isset( $locations[ $specific_menu ] ) ) {
+				WP_CLI::error( 'Menu not found' );
+			}
+
+			$assigned_id = $locations[ $specific_menu ];
+
+			$menus = [ array_pop( array_filter( $menus, function( $menu ) use ( $assigned_id ) {
+				return $assigned_id === $menu->term_id;
+			} ) ) ];
+		}
 
 		foreach ( $menus as $menu ) :
 			$export_menu = array(
@@ -276,4 +289,4 @@ class Menu_Command extends WP_CLI_Command {
 	}
 }
 
-WP_CLI::add_command( 'menu', new Menu_Command );
+WP_CLI::add_command( 'menu-porter', 'Menu_Porter' );
