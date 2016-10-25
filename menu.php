@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'WP_CLI' ) ) {
+	return;
+}
+
 class Menu_Command extends WP_CLI_Command {
 
     /**
